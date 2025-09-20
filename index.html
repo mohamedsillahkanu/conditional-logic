@@ -953,28 +953,36 @@
             
             const container = document.getElementById('valueInputContainer');
             
-            // For categorical data with reasonable number of unique values, show dropdown
-            if (!isNumeric && uniqueValues.length <= 50 && ['==', '!='].includes(operator)) {
+            // For categorical data with reasonable number of unique values, always show dropdown
+            if (!isNumeric && uniqueValues.length <= 100) {
                 container.innerHTML = `
                     <select id="value1" class="form-control">
                         <option value="">Select value...</option>
                         ${uniqueValues.map(val => `<option value="${val}">${val}</option>`).join('')}
                     </select>
                 `;
-            } else {
-                // For numeric data or text operations, show input field
-                const placeholder = isNumeric ? 'Enter number' : 'Enter text';
-                const inputType = isNumeric && ['>', '<', '>=', '<='].includes(operator) ? 'number' : 'text';
-                
+            } else if (!isNumeric && uniqueValues.length > 100) {
+                // For categorical with too many values, show input with datalist
+                const datalistId = 'valueOptions';
                 container.innerHTML = `
-                    <input type="${inputType}" id="value1" class="form-control" placeholder="${placeholder}">
+                    <input type="text" id="value1" class="form-control" placeholder="Enter text (${uniqueValues.length} unique values)" list="${datalistId}">
+                    <datalist id="${datalistId}">
+                        ${uniqueValues.slice(0, 50).map(val => `<option value="${val}"></option>`).join('')}
+                    </datalist>
+                `;
+            } else {
+                // For numeric data, show input field
+                const inputType = ['>', '<', '>=', '<='].includes(operator) ? 'number' : 'text';
+                container.innerHTML = `
+                    <input type="${inputType}" id="value1" class="form-control" placeholder="Enter number">
                 `;
                 
-                // Add datalist for text suggestions
-                if (!isNumeric && uniqueValues.length <= 20) {
+                // Add datalist for numeric suggestions too
+                if (uniqueValues.length <= 20) {
                     const datalistId = 'valueOptions';
-                    container.innerHTML = `
-                        <input type="text" id="value1" class="form-control" placeholder="${placeholder}" list="${datalistId}">
+                    const currentInput = container.querySelector('#value1');
+                    currentInput.setAttribute('list', datalistId);
+                    container.innerHTML += `
                         <datalist id="${datalistId}">
                             ${uniqueValues.map(val => `<option value="${val}"></option>`).join('')}
                         </datalist>
