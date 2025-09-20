@@ -617,15 +617,15 @@
                     <div class="form-group">
                         <label for="advancedOperator">Operator:</label>
                         <select id="advancedOperator" class="form-control">
-                            <option value="==">=Equals</option>
-                            <option value=">">>Greater Than</option>
-                            <option value="<"><Less Than</option>
-                            <option value=">=">=Greater or Equal</option>
-                            <option value="<=">=Less or Equal</option>
-                            <option value="!=">=Not Equals</option>
-                            <option value="contains">Contains</option>
-                            <option value="startswith">Starts With</option>
-                            <option value="endswith">Ends With</option>
+                            <option value="==">=</option>
+                            <option value=">">></option>
+                            <option value="<"><</option>
+                            <option value=">=">>=</option>
+                            <option value="<="><=</option>
+                            <option value="!=">!=</option>
+                            <option value="contains">contains</option>
+                            <option value="startswith">startswith</option>
+                            <option value="endswith">endswith</option>
                         </select>
                     </div>
                     
@@ -896,6 +896,10 @@
             const conditionType = document.getElementById('conditionType').value;
             const simpleUI = document.getElementById('simpleConditionUI');
             const multipleUI = document.getElementById('multipleConditionUI');
+            const multipleTitle = document.getElementById('multipleConditionTitle');
+            const trueLabel = document.getElementById('trueLabelMultiple');
+            const falseLabel = document.getElementById('falseLabelMultiple');
+            const applyBtn = document.getElementById('applyMultipleBtn');
             
             if (conditionType === 'simple') {
                 simpleUI.classList.remove('hidden');
@@ -903,7 +907,88 @@
             } else {
                 simpleUI.classList.add('hidden');
                 multipleUI.classList.remove('hidden');
+                
+                if (conditionType === 'and') {
+                    multipleTitle.textContent = 'Multiple Conditions (AND)';
+                    trueLabel.textContent = 'Value if ALL conditions are True:';
+                    falseLabel.textContent = 'Value if ANY condition is False:';
+                    applyBtn.textContent = 'Apply AND Conditions';
+                } else {
+                    multipleTitle.textContent = 'Multiple Conditions (OR)';
+                    trueLabel.textContent = 'Value if ANY condition is True:';
+                    falseLabel.textContent = 'Value if ALL conditions are False:';
+                    applyBtn.textContent = 'Apply OR Conditions';
+                }
+                
                 generateConditionRows();
+            }
+        }
+
+        function updateColumnDataType() {
+            const targetColumn = document.getElementById('targetColumn').value;
+            const dataTypeDiv = document.getElementById('columnDataType');
+            
+            if (targetColumn && currentData.length > 0) {
+                const sampleValue = currentData[0][targetColumn];
+                const isNumeric = !isNaN(parseFloat(sampleValue)) && isFinite(sampleValue);
+                const dataType = isNumeric ? 'numeric' : 'text/string';
+                dataTypeDiv.textContent = `Column data type: ${dataType}`;
+            } else {
+                dataTypeDiv.textContent = '';
+            }
+        }
+
+        function updateResultColumnName() {
+            const targetColumn = document.getElementById('targetColumn').value;
+            const resultColumn = document.getElementById('resultColumn');
+            
+            if (targetColumn && !resultColumn.value) {
+                resultColumn.value = `${targetColumn}_result`;
+            }
+        }
+
+        function applyMultipleConditions() {
+            const targetColumn = document.getElementById('targetColumn').value;
+            const conditionType = document.getElementById('conditionType').value;
+            const resultColumn = document.getElementById('resultColumn').value;
+            const trueValue = document.getElementById('trueValueMultiple').value;
+            const falseValue = document.getElementById('falseValueMultiple').value;
+
+            if (!targetColumn || !resultColumn) {
+                showAlert('Please select a target column and enter a result column name.', 'error');
+                return;
+            }
+
+            try {
+                const numConditions = parseInt(document.getElementById('numConditions').value);
+                const conditions = [];
+                
+                for (let i = 0; i < numConditions; i++) {
+                    const operator = document.getElementById(`multiOp${i}`).value;
+                    const value = document.getElementById(`multiVal${i}`).value;
+                    
+                    if (!value) {
+                        showAlert(`Please enter a value for condition ${i + 1}.`, 'error');
+                        return;
+                    }
+                    
+                    conditions.push({operator, value});
+                }
+
+                const condition = evaluateMultipleConditions(currentData, targetColumn, conditions, conditionType);
+                const codeString = generateMultipleConditionsCode(targetColumn, conditions, conditionType, resultColumn, trueValue, falseValue);
+
+                // Apply condition to data
+                modifiedData = currentData.map((row, index) => ({
+                    ...row,
+                    [resultColumn]: condition[index] ? trueValue : falseValue
+                }));
+
+                displayResults(modifiedData, resultColumn, trueValue, falseValue, codeString);
+                showAlert(`${conditionType.toUpperCase()} conditions applied successfully!`, 'success');
+
+            } catch (error) {
+                showAlert('Error applying multiple conditions: ' + error.message, 'error');
             }
         }
 
@@ -917,23 +1002,27 @@
                 conditionRow.className = 'condition-row';
                 conditionRow.innerHTML = `
                     <div class="form-group">
-                        <label>Operator ${i + 1}:</label>
+                        <label>Condition ${i + 1}:</label>
+                        <h4 style="color: #93c5fd; margin: 0.5rem 0;">Operator:</h4>
                         <select id="multiOp${i}" class="form-control">
-                            <option value="==">=Equals</option>
-                            <option value=">">>Greater Than</option>
-                            <option value="<"><Less Than</option>
-                            <option value=">=">=Greater or Equal</option>
-                            <option value="<=">=Less or Equal</option>
-                            <option value="!=">=Not Equals</option>
-                            <option value="contains">Contains</option>
-                            <option value="startswith">Starts With</option>
-                            <option value="endswith">Ends With</option>
+                            <option value="==">=</option>
+                            <option value=">">></option>
+                            <option value="<"><</option>
+                            <option value=">=">>=</option>
+                            <option value="<="><=</option>
+                            <option value="!=">!=</option>
+                            <option value="contains">contains</option>
+                            <option value="startswith">startswith</option>
+                            <option value="endswith">endswith</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Value ${i + 1}:</label>
-                        <input type="text" id="multiVal${i}" class="form-control" placeholder="Enter value">
+                        <label>&nbsp;</label>
+                        <h4 style="color: #93c5fd; margin: 0.5rem 0;">Value:</h4>
+                        <input type="text" id="multiVal${i}" class="form-control" placeholder="Enter value ${i + 1}">
                     </div>
+                    <div></div>
+                    <div></div>
                 `;
                 container.appendChild(conditionRow);
             }
@@ -946,32 +1035,36 @@
             
             for (let i = 0; i < numColumns; i++) {
                 const columnRow = document.createElement('div');
-                columnRow.className = 'condition-row';
+                columnRow.className = 'condition-builder';
+                columnRow.style.marginBottom = '1rem';
                 columnRow.innerHTML = `
-                    <div class="form-group">
-                        <label>Column ${i + 1}:</label>
-                        <select id="multiCol${i}" class="form-control">
-                            <option value="">Select column...</option>
-                            ${originalColumns.map(col => `<option value="${col}">${col}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Operator ${i + 1}:</label>
-                        <select id="multiColOp${i}" class="form-control">
-                            <option value="==">=Equals</option>
-                            <option value=">">>Greater Than</option>
-                            <option value="<"><Less Than</option>
-                            <option value=">=">=Greater or Equal</option>
-                            <option value="<=">=Less or Equal</option>
-                            <option value="!=">=Not Equals</option>
-                            <option value="contains">Contains</option>
-                            <option value="startswith">Starts With</option>
-                            <option value="endswith">Ends With</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Value ${i + 1}:</label>
-                        <input type="text" id="multiColVal${i}" class="form-control" placeholder="Enter value">
+                    <h4 style="color: #93c5fd; margin-bottom: 1rem;">Column ${i + 1} Condition</h4>
+                    <div class="condition-row" style="grid-template-columns: 1fr 1fr 1fr;">
+                        <div class="form-group">
+                            <label>Column ${i + 1}:</label>
+                            <select id="multiCol${i}" class="form-control">
+                                <option value="">Select column...</option>
+                                ${originalColumns.map(col => `<option value="${col}">${col}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Operator ${i + 1}:</label>
+                            <select id="multiColOp${i}" class="form-control">
+                                <option value="==">=</option>
+                                <option value=">">></option>
+                                <option value="<"><</option>
+                                <option value=">=">>=</option>
+                                <option value="<="><=</option>
+                                <option value="!=">!=</option>
+                                <option value="contains">contains</option>
+                                <option value="startswith">startswith</option>
+                                <option value="endswith">endswith</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Value ${i + 1}:</label>
+                            <input type="text" id="multiColVal${i}" class="form-control" placeholder="Enter value ${i + 1}">
+                        </div>
                     </div>
                 `;
                 container.appendChild(columnRow);
@@ -1172,29 +1265,40 @@
         function evaluateCondition(data, column, operator, value) {
             return data.map(row => {
                 const cellValue = row[column];
+                
+                // Handle string operations exactly like Streamlit
+                if (['contains', 'startswith', 'endswith'].includes(operator)) {
+                    const cellStr = String(cellValue || '').toLowerCase();
+                    const valueStr = String(value || '').toLowerCase();
+                    
+                    switch (operator) {
+                        case 'contains':
+                            return cellStr.includes(valueStr);
+                        case 'startswith':
+                            return cellStr.startsWith(valueStr);
+                        case 'endswith':
+                            return cellStr.endsWith(valueStr);
+                    }
+                }
+                
+                // Handle numeric/comparison operations
                 const numCellValue = parseFloat(cellValue);
                 const numValue = parseFloat(value);
                 const isNumeric = !isNaN(numCellValue) && !isNaN(numValue);
 
                 switch (operator) {
                     case '==':
-                        return isNumeric ? numCellValue === numValue : String(cellValue).toLowerCase() === String(value).toLowerCase();
+                        return isNumeric ? numCellValue === numValue : String(cellValue) === String(value);
                     case '>':
-                        return isNumeric ? numCellValue > numValue : String(cellValue) > String(value);
+                        return isNumeric ? numCellValue > numValue : false;
                     case '<':
-                        return isNumeric ? numCellValue < numValue : String(cellValue) < String(value);
+                        return isNumeric ? numCellValue < numValue : false;
                     case '>=':
-                        return isNumeric ? numCellValue >= numValue : String(cellValue) >= String(value);
+                        return isNumeric ? numCellValue >= numValue : false;
                     case '<=':
-                        return isNumeric ? numCellValue <= numValue : String(cellValue) <= String(value);
+                        return isNumeric ? numCellValue <= numValue : false;
                     case '!=':
-                        return isNumeric ? numCellValue !== numValue : String(cellValue).toLowerCase() !== String(value).toLowerCase();
-                    case 'contains':
-                        return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
-                    case 'startswith':
-                        return String(cellValue).toLowerCase().startsWith(String(value).toLowerCase());
-                    case 'endswith':
-                        return String(cellValue).toLowerCase().endsWith(String(value).toLowerCase());
+                        return isNumeric ? numCellValue !== numValue : String(cellValue) !== String(value);
                     default:
                         return false;
                 }
@@ -1202,17 +1306,28 @@
         }
 
         function evaluateMultipleConditions(data, column, conditions, type) {
-            const results = conditions.map(({operator, value}) => 
-                evaluateCondition(data, column, operator, value)
-            );
-
-            return data.map((_, index) => {
-                if (type === 'and') {
-                    return results.every(result => result[index]);
-                } else {
-                    return results.some(result => result[index]);
-                }
-            });
+            // Start with appropriate initial condition based on type
+            let combinedCondition;
+            
+            if (type === 'and') {
+                // For AND: start with all true, then AND each condition
+                combinedCondition = new Array(data.length).fill(true);
+                
+                conditions.forEach(({operator, value}) => {
+                    const condition = evaluateCondition(data, column, operator, value);
+                    combinedCondition = combinedCondition.map((val, idx) => val && condition[idx]);
+                });
+            } else {
+                // For OR: start with all false, then OR each condition
+                combinedCondition = new Array(data.length).fill(false);
+                
+                conditions.forEach(({operator, value}) => {
+                    const condition = evaluateCondition(data, column, operator, value);
+                    combinedCondition = combinedCondition.map((val, idx) => val || condition[idx]);
+                });
+            }
+            
+            return combinedCondition;
         }
 
         function evaluateExpression(expr) {
@@ -1262,14 +1377,14 @@
             if (['contains', 'startswith', 'endswith'].includes(operator)) {
                 conditionStr = `df['${column}'].astype(str).str.${operator}('${value}')`;
             } else {
-                const valueStr = isNaN(value) ? `'${value}'` : value;
+                const valueStr = isNaN(parseFloat(value)) ? `'${value}'` : value;
                 conditionStr = `df['${column}'] ${operator} ${valueStr}`;
             }
 
             return `import numpy as np
 import pandas as pd
 
-# Apply condition
+# Apply the condition
 df['${resultColumn}'] = np.where(${conditionStr}, '${trueValue}', '${falseValue}')`;
         }
 
@@ -1278,7 +1393,7 @@ df['${resultColumn}'] = np.where(${conditionStr}, '${trueValue}', '${falseValue}
                 if (['contains', 'startswith', 'endswith'].includes(operator)) {
                     return `df['${column}'].astype(str).str.${operator}('${value}')`;
                 } else {
-                    const valueStr = isNaN(value) ? `'${value}'` : value;
+                    const valueStr = isNaN(parseFloat(value)) ? `'${value}'` : value;
                     return `df['${column}'] ${operator} ${valueStr}`;
                 }
             });
@@ -1298,7 +1413,7 @@ df['${resultColumn}'] = np.where(${combinedCondition}, '${trueValue}', '${falseV
                 if (['contains', 'startswith', 'endswith'].includes(operator)) {
                     return `df['${column}'].astype(str).str.${operator}('${value}')`;
                 } else {
-                    const valueStr = isNaN(value) ? `'${value}'` : value;
+                    const valueStr = isNaN(parseFloat(value)) ? `'${value}'` : value;
                     return `df['${column}'] ${operator} ${valueStr}`;
                 }
             });
