@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataFrame Condition Builder</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #e1effe;
+            background: linear-gradient(135deg, #0a0e1a 0%, #0f1629 25%, #1a237e 75%, #1565c0 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 3rem 0;
+            background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 25%, #1e3a8a 75%, #2563eb 100%);
+            color: white;
+            margin-bottom: 2rem;
+            border-radius: 0 0 1rem 1rem;
+            box-shadow: 0 8px 32px rgba(37, 99, 235, 0.3);
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .header h1 {
+            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+            backdrop-filter: blur(15px);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .card h2, .card h3 {
+            color: #93c5fd;
+            margin-bottom: 1.5rem;
+        }
+
+        .upload-area {
+            border: 2px dashed #2563eb;
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: rgba(30, 41, 59, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            color: white;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(29, 78, 216, 0.3);
+        }
+
+        .file-input-label:hover {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            transform: translateY(-2px);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid rgba(37, 99, 235, 0.3);
+            margin-bottom: 2rem;
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-bottom: none;
+            color: #93c5fd;
+            transition: all 0.3s ease;
+        }
+
+        .tab:first-child {
+            border-radius: 8px 0 0 0;
+        }
+
+        .tab:last-child {
+            border-radius: 0 8px 0 0;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            color: white;
+            border-color: #2563eb;
+        }
+
+        .tab:hover:not(.active) {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #93c5fd;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid rgba(30, 64, 175, 0.3);
+            border-radius: 8px;
+            font-size: 14px;
+            background: rgba(15, 23, 42, 0.9);
+            color: #e1effe;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-decoration: none;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(29, 78, 216, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(75, 85, 99, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-2px);
+        }
+
+        .data-preview {
+            max-height: 500px;
+            overflow: auto;
+            border: 1px solid rgba(30, 64, 175, 0.3);
+            border-radius: 8px;
+            margin: 1rem 0;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(15px);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(30, 64, 175, 0.2);
+            white-space: nowrap;
+            color: #e1effe;
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.95) 100%);
+            backdrop-filter: blur(10px);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            color: #93c5fd;
+            z-index: 10;
+        }
+
+        .data-table tr:hover {
+            background-color: rgba(37, 99, 235, 0.1);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            backdrop-filter: blur(15px);
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, rgba(5, 150, 105, 0.2) 0%, rgba(4, 120, 87, 0.2) 100%);
+            border-left: 4px solid #059669;
+            color: #6ee7b7;
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(185, 28, 28, 0.2) 100%);
+            border-left: 4px solid #dc2626;
+            color: #fca5a5;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(8, 145, 178, 0.2) 100%);
+            border-left: 4px solid #06b6d4;
+            color: #67e8f9;
+        }
+
+        .condition-builder {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(51, 65, 85, 0.6) 100%);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .condition-row {
+            display: grid;
+            grid-template-columns: 1fr 120px 1fr 80px;
+            gap: 1rem;
+            align-items: end;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 8px;
+            border: 1px solid rgba(30, 64, 175, 0.2);
+        }
+
+        .expression-display {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            color: #93c5fd;
+            min-height: 50px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .code-block {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            color: #e1effe;
+            overflow-x: auto;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.8) 100%);
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #93c5fd;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab {
+                border-radius: 0;
+                border-bottom: 1px solid rgba(37, 99, 235, 0.2);
+            }
+
+            .condition-row {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 0 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>DataFrame Condition Builder</h1>
+        <p>Upload CSV or Excel files and apply conditional operations with np.where()</p>
+    </div>
+
+    <div class="container">
+        <!-- File Upload Section -->
+        <div class="card" id="uploadSection">
+            <h2>Upload Your Data File</h2>
+            <div class="upload-area">
+                <p style="margin-bottom: 1rem; color: #9ca3af;">
+                    Upload a CSV or Excel file to start building conditions
+                </p>
+                <label for="fileInput" class="file-input-label">
+                    Choose File
+                </label>
+                <input type="file" id="fileInput" class="file-input" accept=".csv,.xlsx,.xls">
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: #6b7280;">
+                    Supported formats: CSV, Excel (.xlsx, .xls)
+                </p>
+            </div>
+        </div>
+
+        <!-- File Info and Data Preview -->
+        <div class="card hidden" id="dataSection">
+            <h2>Original DataFrame</h2>
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-number" id="rowCount">0</div>
+                    <div class="stat-label">Rows</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="columnCount">0</div>
+                    <div class="stat-label">Columns</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="fileSize">0</div>
+                    <div class="stat-label">File Size</div>
+                </div>
+            </div>
+            
+            <div class="data-preview">
+                <table class="data-table" id="originalTable">
+                    <!-- Data will be populated here -->
+                </table>
+            </div>
+        </div>
+
+        <!-- Condition Builder Tabs -->
+        <div class="card hidden" id="conditionSection">
+            <h2>Condition Builder</h2>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('simple')">Simple Conditions</div>
+                <div class="tab" onclick="switchTab('multiple')">Multiple Columns</div>
+                <div class="tab" onclick="switchTab('advanced')">Advanced (AND/OR Mix)</div>
+            </div>
+
+            <!-- Simple Conditions Tab -->
+            <div class="tab-content active" id="simpleTab">
+                <h3>Apply conditions to a single column</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="targetColumn">Target Column:</label>
+                        <select id="targetColumn" class="form-control">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="conditionType">Condition Type:</label>
+                        <select id="conditionType" class="form-control" onchange="updateConditionUI()">
+                            <option value="simple">Simple Condition</option>
+                            <option value="and">Multiple Conditions (AND)</option>
+                            <option value="or">Multiple Conditions (OR)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="simpleConditionUI">
+                    <div class="condition-builder">
+                        <div class="condition-row">
+                            <div class="form-group">
+                                <label for="operator1">Operator:</label>
+                                <select id="operator1" class="form-control">
+                                    <option value="==">=Equals</option>
+                                    <option value=">">>Greater Than</option>
+                                    <option value="<"><Less Than</option>
+                                    <option value=">=">=Greater or Equal</option>
+                                    <option value="<=">=Less or Equal</option>
+                                    <option value="!=">=Not Equals</option>
+                                    <option value="contains">Contains</option>
+                                    <option value="startswith">Starts With</option>
+                                    <option value="endswith">Ends With</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="value1">Value:</label>
+                                <input type="text" id="value1" class="form-control" placeholder="Enter value">
+                            </div>
+                            
+                            <div></div>
+                            <div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="multipleConditionUI" class="hidden">
+                    <div class="form-group">
+                        <label for="numConditions">Number of Conditions:</label>
+                        <select id="numConditions" class="form-control" onchange="generateConditionRows()">
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    
+                    <div id="conditionRows"></div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="resultColumn">Result Column Name:</label>
+                        <input type="text" id="resultColumn" class="form-control" value="result" placeholder="Enter column name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="trueValue">Value if True:</label>
+                        <input type="text" id="trueValue" class="form-control" value="True" placeholder="True value">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="falseValue">Value if False:</label>
+                        <input type="text" id="falseValue" class="form-control" value="False" placeholder="False value">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="applySimpleCondition()">Apply Condition</button>
+            </div>
+
+            <!-- Multiple Columns Tab -->
+            <div class="tab-content" id="multipleTab">
+                <h3>Apply conditions across multiple columns</h3>
+                
+                <div class="form-group">
+                    <label for="numMultiColumns">Number of Columns:</label>
+                    <select id="numMultiColumns" class="form-control" onchange="generateMultiColumnRows()">
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                    </select>
+                </div>
+                
+                <div id="multiColumnRows"></div>
+                
+                <div class="form-group">
+                    <label for="combinationMethod">Combination Method:</label>
+                    <select id="combinationMethod" class="form-control">
+                        <option value="and">AND (all conditions must be true)</option>
+                        <option value="or">OR (any condition can be true)</option>
+                    </select>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="multiResultColumn">Result Column Name:</label>
+                        <input type="text" id="multiResultColumn" class="form-control" value="multi_result" placeholder="Enter column name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="multiTrueValue">Value if True:</label>
+                        <input type="text" id="multiTrueValue" class="form-control" value="True" placeholder="True value">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="multiFalseValue">Value if False:</label>
+                        <input type="text" id="multiFalseValue" class="form-control" value="False" placeholder="False value">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="applyMultiColumnCondition()">Apply Multi-Column Condition</button>
+            </div>
+
+            <!-- Advanced Tab -->
+            <div class="tab-content" id="advancedTab">
+                <h3>Advanced Condition Builder with Grouping</h3>
+                <p style="color: #9ca3af; margin-bottom: 1rem;">
+                    Build complex conditions with proper grouping and nesting. 
+                    Example: (A==B) AND [(C==D) OR (E==F)]
+                </p>
+                
+                <div id="expressionDisplay" class="expression-display">
+                    <em style="color: #6b7280;">Your expression will appear here...</em>
+                </div>
+                
+                <div class="form-grid">
+                    <div>
+                        <h4 style="color: #93c5fd;">Add Parentheses</h4>
+                        <button class="btn btn-secondary" onclick="addToExpression('(')">Add ( </button>
+                        <button class="btn btn-secondary" onclick="addToExpression(')')">Add ) </button>
+                    </div>
+                    
+                    <div>
+                        <h4 style="color: #93c5fd;">Add Logical Operators</h4>
+                        <button class="btn btn-secondary" onclick="addToExpression('AND')">Add AND</button>
+                        <button class="btn btn-secondary" onclick="addToExpression('OR')">Add OR</button>
+                    </div>
+                </div>
+
+                <h4 style="color: #93c5fd;">Add a Condition</h4>
+                <div class="condition-row">
+                    <div class="form-group">
+                        <label for="advancedColumn">Column:</label>
+                        <select id="advancedColumn" class="form-control">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="advancedOperator">Operator:</label>
+                        <select id="advancedOperator" class="form-control">
+                            <option value="==">=Equals</option>
+                            <option value=">">>Greater Than</option>
+                            <option value="<"><Less Than</option>
+                            <option value=">=">=Greater or Equal</option>
+                            <option value="<=">=Less or Equal</option>
+                            <option value="!=">=Not Equals</option>
+                            <option value="contains">Contains</option>
+                            <option value="startswith">Starts With</option>
+                            <option value="endswith">Ends With</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="advancedValue">Value:</label>
+                        <input type="text" id="advancedValue" class="form-control" placeholder="Enter value">
+                    </div>
+                    
+                    <div>
+                        <button class="btn btn-secondary" onclick="addConditionToExpression()">Add Condition</button>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="advancedResultColumn">Result Column Name:</label>
+                        <input type="text" id="advancedResultColumn" class="form-control" value="advanced_result" placeholder="Enter column name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="advancedTrueValue">Value if True:</label>
+                        <input type="text" id="advancedTrueValue" class="form-control" value="True" placeholder="True value">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="advancedFalseValue">Value if False:</label>
+                        <input type="text" id="advancedFalseValue" class="form-control" value="False" placeholder="False value">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="applyAdvancedCondition()">Apply Advanced Condition</button>
+                <button class="btn btn-secondary" onclick="clearExpression()">Clear Expression</button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card hidden" id="resultsSection">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Results</h2>
+                <button class="btn btn-success" onclick="downloadResults()">Download CSV</button>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalRows">0</div>
+                    <div class="stat-label">Total Rows</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="trueCount">0</div>
+                    <div class="stat-label" id="trueLabel">True</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="falseCount">0</div>
+                    <div class="stat-label" id="falseLabel">False</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="successRate">0%</div>
+                    <div class="stat-label">Success Rate</div>
+                </div>
+            </div>
+            
+            <h3>Modified DataFrame</h3>
+            <div class="data-preview">
+                <table class="data-table" id="resultsTable">
+                    <!-- Results will be populated here -->
+                </table>
+            </div>
+            
+            <h3>Generated Python Code</h3>
+            <div class="code-block" id="generatedCode">
+                <!-- Code will be generated here -->
+            </div>
+        </div>
+
+        <!-- Alerts Container -->
+        <div id="alertsContainer"></div>
+    </div>
+
+    <script>
+        let currentData = [];
+        let originalColumns = [];
+        let expression = [];
+        let modifiedData = [];
+
+        // File upload handling
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const fileName = file.name;
+                const fileExtension = fileName.split('.').pop().toLowerCase();
+
+                showAlert('Processing file: ' + fileName, 'info');
+
+                if (fileExtension === 'csv') {
+                    Papa.parse(file, {
+                        header: true,
+                        skipEmptyLines: true,
+                        dynamicTyping: false,
+                        complete: function(results) {
+                            processData(results.data, fileName, file.size);
+                        },
+                        error: function(error) {
+                            showAlert('Error reading CSV file: ' + error.message, 'error');
+                        }
+                    });
+                } else if (['xlsx', 'xls'].includes(fileExtension)) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, {type: 'array'});
+                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+                                header: 1,
+                                defval: ''
+                            });
+                            
+                            const headers = jsonData[0] || [];
+                            const processedData = jsonData.slice(1).map(row => {
+                                const obj = {};
+                                headers.forEach((header, index) => {
+                                    obj[header] = row[index] || '';
+                                });
+                                return obj;
+                            });
+                            
+                            processData(processedData, fileName, file.size);
+                        } catch (error) {
+                            showAlert('Error reading Excel file: ' + error.message, 'error');
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    showAlert('Unsupported file type. Please upload CSV or Excel files.', 'error');
+                }
+            }
+        }
+
+        function processData(data, fileName, fileSize) {
+            if (!data || data.length === 0) {
+                showAlert('The file appears to be empty or invalid.', 'error');
+                return;
+            }
+
+            const firstRow = data[0];
+            if (!firstRow || typeof firstRow !== 'object') {
+                showAlert('Invalid data format detected.', 'error');
+                return;
+            }
+
+            originalColumns = Object.keys(firstRow);
+            currentData = data.filter(row => {
+                return originalColumns.some(col => {
+                    const value = row[col];
+                    return value !== null && value !== undefined && value !== '';
+                });
+            });
+
+            if (currentData.length === 0) {
+                showAlert('No valid data rows found in the file.', 'error');
+                return;
+            }
+
+            showAlert(`File processed successfully! Found ${originalColumns.length} columns and ${currentData.length} data rows.`, 'success');
+            
+            updateFileStats(currentData.length, originalColumns.length, fileSize);
+            displayOriginalData();
+            populateColumnSelectors();
+            
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('dataSection').classList.remove('hidden');
+            document.getElementById('conditionSection').classList.remove('hidden');
+        }
+
+        function updateFileStats(rows, columns, fileSize) {
+            document.getElementById('rowCount').textContent = rows.toLocaleString();
+            document.getElementById('columnCount').textContent = columns;
+            document.getElementById('fileSize').textContent = formatFileSize(fileSize);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function displayOriginalData() {
+            const table = document.getElementById('originalTable');
+            table.innerHTML = '';
+
+            if (!currentData || currentData.length === 0) return;
+
+            // Create header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            
+            originalColumns.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                headerRow.appendChild(th);
+            });
+            
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Create body with first 50 rows
+            const tbody = document.createElement('tbody');
+            const previewData = currentData.slice(0, 50);
+            
+            previewData.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                originalColumns.forEach(col => {
+                    const td = document.createElement('td');
+                    td.textContent = row[col] || '';
+                    tr.appendChild(td);
+                });
+                
+                tbody.appendChild(tr);
+            });
+            
+            table.appendChild(tbody);
+
+            if (currentData.length > 50) {
+                const infoRow = document.createElement('tr');
+                const infoCell = document.createElement('td');
+                infoCell.colSpan = originalColumns.length;
+                infoCell.textContent = `Showing first 50 rows of ${currentData.length} total rows`;
+                infoCell.style.textAlign = 'center';
+                infoCell.style.fontStyle = 'italic';
+                infoCell.style.color = '#6b7280';
+                infoRow.appendChild(infoCell);
+                tbody.appendChild(infoRow);
+            }
+        }
+
+        function populateColumnSelectors() {
+            const selectors = ['targetColumn', 'advancedColumn'];
+            
+            selectors.forEach(selectorId => {
+                const selector = document.getElementById(selectorId);
+                selector.innerHTML = '<option value="">Select column...</option>';
+                
+                originalColumns.forEach(column => {
+                    const option = document.createElement('option');
+                    option.value = column;
+                    option.textContent = column;
+                    selector.appendChild(option);
+                });
+            });
+        }
+
+        function switchTab(tabName) {
+            // Remove active class from all tabs and contents
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding content
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        function updateConditionUI() {
+            const conditionType = document.getElementById('conditionType').value;
+            const simpleUI = document.getElementById('simpleConditionUI');
+            const multipleUI = document.getElementById('multipleConditionUI');
+            
+            if (conditionType === 'simple') {
+                simpleUI.classList.remove('hidden');
+                multipleUI.classList.add('hidden');
+            } else {
+                simpleUI.classList.add('hidden');
+                multipleUI.classList.remove('hidden');
+                generateConditionRows();
+            }
+        }
+
+        function generateConditionRows() {
+            const numConditions = parseInt(document.getElementById('numConditions').value);
+            const container = document.getElementById('conditionRows');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < numConditions; i++) {
+                const conditionRow = document.createElement('div');
+                conditionRow.className = 'condition-row';
+                conditionRow.innerHTML = `
+                    <div class="form-group">
+                        <label>Operator ${i + 1}:</label>
+                        <select id="multiOp${i}" class="form-control">
+                            <option value="==">=Equals</option>
+                            <option value=">">>Greater Than</option>
+                            <option value="<"><Less Than</option>
+                            <option value=">=">=Greater or Equal</option>
+                            <option value="<=">=Less or Equal</option>
+                            <option value="!=">=Not Equals</option>
+                            <option value="contains">Contains</option>
+                            <option value="startswith">Starts With</option>
+                            <option value="endswith">Ends With</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Value ${i + 1}:</label>
+                        <input type="text" id="multiVal${i}" class="form-control" placeholder="Enter value">
+                    </div>
+                `;
+                container.appendChild(conditionRow);
+            }
+        }
+
+        function generateMultiColumnRows() {
+            const numColumns = parseInt(document.getElementById('numMultiColumns').value);
+            const container = document.getElementById('multiColumnRows');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < numColumns; i++) {
+                const columnRow = document.createElement('div');
+                columnRow.className = 'condition-row';
+                columnRow.innerHTML = `
+                    <div class="form-group">
+                        <label>Column ${i + 1}:</label>
+                        <select id="multiCol${i}" class="form-control">
+                            <option value="">Select column...</option>
+                            ${originalColumns.map(col => `<option value="${col}">${col}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Operator ${i + 1}:</label>
+                        <select id="multiColOp${i}" class="form-control">
+                            <option value="==">=Equals</option>
+                            <option value=">">>Greater Than</option>
+                            <option value="<"><Less Than</option>
+                            <option value=">=">=Greater or Equal</option>
+                            <option value="<=">=Less or Equal</option>
+                            <option value="!=">=Not Equals</option>
+                            <option value="contains">Contains</option>
+                            <option value="startswith">Starts With</option>
+                            <option value="endswith">Ends With</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Value ${i + 1}:</label>
+                        <input type="text" id="multiColVal${i}" class="form-control" placeholder="Enter value">
+                    </div>
+                `;
+                container.appendChild(columnRow);
+            }
+        }
+
+        function applySimpleCondition() {
+            const targetColumn = document.getElementById('targetColumn').value;
+            const conditionType = document.getElementById('conditionType').value;
+            const resultColumn = document.getElementById('resultColumn').value;
+            const trueValue = document.getElementById('trueValue').value;
+            const falseValue = document.getElementById('falseValue').value;
+
+            if (!targetColumn || !resultColumn) {
+                showAlert('Please select a target column and enter a result column name.', 'error');
+                return;
+            }
+
+            try {
+                let condition;
+                let codeString = '';
+
+                if (conditionType === 'simple') {
+                    const operator = document.getElementById('operator1').value;
+                    const value = document.getElementById('value1').value;
+
+                    if (!value && !['is_empty', 'is_not_empty'].includes(operator)) {
+                        showAlert('Please enter a value for the condition.', 'error');
+                        return;
+                    }
+
+                    condition = evaluateCondition(currentData, targetColumn, operator, value);
+                    codeString = generateCodeString(targetColumn, operator, value, resultColumn, trueValue, falseValue);
+                } else {
+                    const numConditions = parseInt(document.getElementById('numConditions').value);
+                    const conditions = [];
+                    
+                    for (let i = 0; i < numConditions; i++) {
+                        const operator = document.getElementById(`multiOp${i}`).value;
+                        const value = document.getElementById(`multiVal${i}`).value;
+                        conditions.push({operator, value});
+                    }
+
+                    condition = evaluateMultipleConditions(currentData, targetColumn, conditions, conditionType);
+                    codeString = generateMultipleConditionsCode(targetColumn, conditions, conditionType, resultColumn, trueValue, falseValue);
+                }
+
+                // Apply condition to data
+                modifiedData = currentData.map((row, index) => ({
+                    ...row,
+                    [resultColumn]: condition[index] ? trueValue : falseValue
+                }));
+
+                displayResults(modifiedData, resultColumn, trueValue, falseValue, codeString);
+                showAlert('Condition applied successfully!', 'success');
+
+            } catch (error) {
+                showAlert('Error applying condition: ' + error.message, 'error');
+            }
+        }
+
+        function applyMultiColumnCondition() {
+            const numColumns = parseInt(document.getElementById('numMultiColumns').value);
+            const combinationMethod = document.getElementById('combinationMethod').value;
+            const resultColumn = document.getElementById('multiResultColumn').value;
+            const trueValue = document.getElementById('multiTrueValue').value;
+            const falseValue = document.getElementById('multiFalseValue').value;
+
+            if (!resultColumn) {
+                showAlert('Please enter a result column name.', 'error');
+                return;
+            }
+
+            try {
+                const columnConditions = [];
+                
+                for (let i = 0; i < numColumns; i++) {
+                    const column = document.getElementById(`multiCol${i}`).value;
+                    const operator = document.getElementById(`multiColOp${i}`).value;
+                    const value = document.getElementById(`multiColVal${i}`).value;
+                    
+                    if (!column) {
+                        showAlert(`Please select column ${i + 1}.`, 'error');
+                        return;
+                    }
+                    
+                    columnConditions.push({column, operator, value});
+                }
+
+                let finalCondition = new Array(currentData.length).fill(combinationMethod === 'and');
+                
+                columnConditions.forEach(({column, operator, value}) => {
+                    const condition = evaluateCondition(currentData, column, operator, value);
+                    
+                    if (combinationMethod === 'and') {
+                        finalCondition = finalCondition.map((val, idx) => val && condition[idx]);
+                    } else {
+                        finalCondition = finalCondition.map((val, idx) => val || condition[idx]);
+                    }
+                });
+
+                // Apply condition to data
+                modifiedData = currentData.map((row, index) => ({
+                    ...row,
+                    [resultColumn]: finalCondition[index] ? trueValue : falseValue
+                }));
+
+                const codeString = generateMultiColumnCode(columnConditions, combinationMethod, resultColumn, trueValue, falseValue);
+                displayResults(modifiedData, resultColumn, trueValue, falseValue, codeString);
+                showAlert('Multi-column condition applied successfully!', 'success');
+
+            } catch (error) {
+                showAlert('Error applying multi-column condition: ' + error.message, 'error');
+            }
+        }
+
+        function addToExpression(token) {
+            expression.push(token);
+            updateExpressionDisplay();
+        }
+
+        function addConditionToExpression() {
+            const column = document.getElementById('advancedColumn').value;
+            const operator = document.getElementById('advancedOperator').value;
+            const value = document.getElementById('advancedValue').value;
+
+            if (!column || !value) {
+                showAlert('Please select a column and enter a value.', 'error');
+                return;
+            }
+
+            expression.push({type: 'condition', column, operator, value});
+            updateExpressionDisplay();
+            
+            // Clear inputs
+            document.getElementById('advancedColumn').value = '';
+            document.getElementById('advancedValue').value = '';
+        }
+
+        function updateExpressionDisplay() {
+            const display = document.getElementById('expressionDisplay');
+            
+            if (expression.length === 0) {
+                display.innerHTML = '<em style="color: #6b7280;">Your expression will appear here...</em>';
+                return;
+            }
+
+            let displayText = '';
+            expression.forEach((item, index) => {
+                if (typeof item === 'string') {
+                    displayText += ` <span style="color: #3b82f6; font-weight: bold;">${item}</span> `;
+                } else if (item.type === 'condition') {
+                    displayText += ` <span style="color: #93c5fd;">${item.column}</span> <span style="color: #fbbf24;">${item.operator}</span> <span style="color: #34d399;">'${item.value}'</span> `;
+                }
+            });
+
+            display.innerHTML = displayText;
+        }
+
+        function clearExpression() {
+            expression = [];
+            updateExpressionDisplay();
+        }
+
+        function applyAdvancedCondition() {
+            if (expression.length === 0) {
+                showAlert('Please build an expression first.', 'error');
+                return;
+            }
+
+            const resultColumn = document.getElementById('advancedResultColumn').value;
+            const trueValue = document.getElementById('advancedTrueValue').value;
+            const falseValue = document.getElementById('advancedFalseValue').value;
+
+            if (!resultColumn) {
+                showAlert('Please enter a result column name.', 'error');
+                return;
+            }
+
+            try {
+                const finalCondition = evaluateExpression(expression);
+                
+                // Apply condition to data
+                modifiedData = currentData.map((row, index) => ({
+                    ...row,
+                    [resultColumn]: finalCondition[index] ? trueValue : falseValue
+                }));
+
+                const codeString = generateAdvancedCode(expression, resultColumn, trueValue, falseValue);
+                displayResults(modifiedData, resultColumn, trueValue, falseValue, codeString);
+                showAlert('Advanced condition applied successfully!', 'success');
+
+            } catch (error) {
+                showAlert('Error applying advanced condition: ' + error.message, 'error');
+            }
+        }
+
+        function evaluateCondition(data, column, operator, value) {
+            return data.map(row => {
+                const cellValue = row[column];
+                const numCellValue = parseFloat(cellValue);
+                const numValue = parseFloat(value);
+                const isNumeric = !isNaN(numCellValue) && !isNaN(numValue);
+
+                switch (operator) {
+                    case '==':
+                        return isNumeric ? numCellValue === numValue : String(cellValue).toLowerCase() === String(value).toLowerCase();
+                    case '>':
+                        return isNumeric ? numCellValue > numValue : String(cellValue) > String(value);
+                    case '<':
+                        return isNumeric ? numCellValue < numValue : String(cellValue) < String(value);
+                    case '>=':
+                        return isNumeric ? numCellValue >= numValue : String(cellValue) >= String(value);
+                    case '<=':
+                        return isNumeric ? numCellValue <= numValue : String(cellValue) <= String(value);
+                    case '!=':
+                        return isNumeric ? numCellValue !== numValue : String(cellValue).toLowerCase() !== String(value).toLowerCase();
+                    case 'contains':
+                        return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
+                    case 'startswith':
+                        return String(cellValue).toLowerCase().startsWith(String(value).toLowerCase());
+                    case 'endswith':
+                        return String(cellValue).toLowerCase().endsWith(String(value).toLowerCase());
+                    default:
+                        return false;
+                }
+            });
+        }
+
+        function evaluateMultipleConditions(data, column, conditions, type) {
+            const results = conditions.map(({operator, value}) => 
+                evaluateCondition(data, column, operator, value)
+            );
+
+            return data.map((_, index) => {
+                if (type === 'and') {
+                    return results.every(result => result[index]);
+                } else {
+                    return results.some(result => result[index]);
+                }
+            });
+        }
+
+        function evaluateExpression(expr) {
+            // Simplified expression evaluator
+            // This is a basic implementation - a full parser would be more robust
+            const stack = [];
+            let currentResult = null;
+            let currentOperator = null;
+
+            for (const item of expr) {
+                if (typeof item === 'string') {
+                    if (item === '(') {
+                        stack.push({result: currentResult, operator: currentOperator});
+                        currentResult = null;
+                        currentOperator = null;
+                    } else if (item === ')') {
+                        const popped = stack.pop();
+                        if (popped.operator === 'AND') {
+                            currentResult = currentResult.map((val, idx) => popped.result[idx] && val);
+                        } else if (popped.operator === 'OR') {
+                            currentResult = currentResult.map((val, idx) => popped.result[idx] || val);
+                        } else if (popped.result !== null) {
+                            currentResult = currentResult || popped.result;
+                        }
+                    } else if (item === 'AND' || item === 'OR') {
+                        currentOperator = item;
+                    }
+                } else if (item.type === 'condition') {
+                    const conditionResult = evaluateCondition(currentData, item.column, item.operator, item.value);
+                    
+                    if (currentResult === null) {
+                        currentResult = conditionResult;
+                    } else if (currentOperator === 'AND') {
+                        currentResult = currentResult.map((val, idx) => val && conditionResult[idx]);
+                    } else if (currentOperator === 'OR') {
+                        currentResult = currentResult.map((val, idx) => val || conditionResult[idx]);
+                    }
+                }
+            }
+
+            return currentResult || new Array(currentData.length).fill(false);
+        }
+
+        function generateCodeString(column, operator, value, resultColumn, trueValue, falseValue) {
+            let conditionStr = '';
+            
+            if (['contains', 'startswith', 'endswith'].includes(operator)) {
+                conditionStr = `df['${column}'].astype(str).str.${operator}('${value}')`;
+            } else {
+                const valueStr = isNaN(value) ? `'${value}'` : value;
+                conditionStr = `df['${column}'] ${operator} ${valueStr}`;
+            }
+
+            return `import numpy as np
+import pandas as pd
+
+# Apply condition
+df['${resultColumn}'] = np.where(${conditionStr}, '${trueValue}', '${falseValue}')`;
+        }
+
+        function generateMultipleConditionsCode(column, conditions, type, resultColumn, trueValue, falseValue) {
+            const conditionStrings = conditions.map(({operator, value}) => {
+                if (['contains', 'startswith', 'endswith'].includes(operator)) {
+                    return `df['${column}'].astype(str).str.${operator}('${value}')`;
+                } else {
+                    const valueStr = isNaN(value) ? `'${value}'` : value;
+                    return `df['${column}'] ${operator} ${valueStr}`;
+                }
+            });
+
+            const combiner = type === 'and' ? ' & ' : ' | ';
+            const combinedCondition = `(${conditionStrings.join(`) ${combiner} (`)})`;
+
+            return `import numpy as np
+import pandas as pd
+
+# Apply multiple conditions with ${type.toUpperCase()}
+df['${resultColumn}'] = np.where(${combinedCondition}, '${trueValue}', '${falseValue}')`;
+        }
+
+        function generateMultiColumnCode(columnConditions, method, resultColumn, trueValue, falseValue) {
+            const conditionStrings = columnConditions.map(({column, operator, value}) => {
+                if (['contains', 'startswith', 'endswith'].includes(operator)) {
+                    return `df['${column}'].astype(str).str.${operator}('${value}')`;
+                } else {
+                    const valueStr = isNaN(value) ? `'${value}'` : value;
+                    return `df['${column}'] ${operator} ${valueStr}`;
+                }
+            });
+
+            const combiner = method === 'and' ? ' & ' : ' | ';
+            const combinedCondition = `(${conditionStrings.join(`) ${combiner} (`)})`;
+
+            return `import numpy as np
+import pandas as pd
+
+# Apply multi-column conditions with ${method.toUpperCase()}
+df['${resultColumn}'] = np.where(${combinedCondition}, '${trueValue}', '${falseValue}')`;
+        }
+
+        function generateAdvancedCode(expr, resultColumn, trueValue, falseValue) {
+            let codeCondition = '';
+            
+            for (const item of expr) {
+                if (typeof item === 'string') {
+                    if (item === 'AND') {
+                        codeCondition += ' & ';
+                    } else if (item === 'OR') {
+                        codeCondition += ' | ';
+                    } else {
+                        codeCondition += item;
+                    }
+                } else if (item.type === 'condition') {
+                    if (['contains', 'startswith', 'endswith'].includes(item.operator)) {
+                        codeCondition += `df['${item.column}'].astype(str).str.${item.operator}('${item.value}')`;
+                    } else {
+                        const valueStr = isNaN(item.value) ? `'${item.value}'` : item.value;
+                        codeCondition += `df['${item.column}'] ${item.operator} ${valueStr}`;
+                    }
+                }
+            }
+
+            return `import numpy as np
+import pandas as pd
+
+# Apply advanced condition
+df['${resultColumn}'] = np.where(${codeCondition}, '${trueValue}', '${falseValue}')`;
+        }
+
+        function displayResults(data, resultColumn, trueValue, falseValue, codeString) {
+            document.getElementById('resultsSection').classList.remove('hidden');
+            
+            const totalRows = data.length;
+            const trueCount = data.filter(row => row[resultColumn] === trueValue).length;
+            const falseCount = totalRows - trueCount;
+            const successRate = totalRows > 0 ? Math.round((trueCount / totalRows) * 100) : 0;
+            
+            document.getElementById('totalRows').textContent = totalRows.toLocaleString();
+            document.getElementById('trueCount').textContent = trueCount.toLocaleString();
+            document.getElementById('falseCount').textContent = falseCount.toLocaleString();
+            document.getElementById('successRate').textContent = successRate + '%';
+            document.getElementById('trueLabel').textContent = trueValue;
+            document.getElementById('falseLabel').textContent = falseValue;
+            
+            // Display results table
+            const table = document.getElementById('resultsTable');
+            table.innerHTML = '';
+            
+            const allColumns = [...originalColumns, resultColumn];
+            
+            // Create header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            
+            allColumns.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                if (col === resultColumn) {
+                    th.style.backgroundColor = 'rgba(59, 130, 246, 0.3)';
+                    th.style.fontWeight = 'bold';
+                }
+                headerRow.appendChild(th);
+            });
+            
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            // Create body
+            const tbody = document.createElement('tbody');
+            const previewData = data.slice(0, 100);
+            
+            previewData.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                allColumns.forEach(col => {
+                    const td = document.createElement('td');
+                    td.textContent = row[col] || '';
+                    if (col === resultColumn) {
+                        td.style.backgroundColor = row[col] === trueValue ? 'rgba(16, 185, 129, 0.2)' : 'rgba(220, 38, 38, 0.2)';
+                        td.style.fontWeight = 'bold';
+                    }
+                    tr.appendChild(td);
+                });
+                
+                tbody.appendChild(tr);
+            });
+            
+            table.appendChild(tbody);
+            
+            if (data.length > 100) {
+                const infoRow = document.createElement('tr');
+                const infoCell = document.createElement('td');
+                infoCell.colSpan = allColumns.length;
+                infoCell.textContent = `Showing first 100 rows of ${data.length} total results. Download CSV for complete data.`;
+                infoCell.style.textAlign = 'center';
+                infoCell.style.fontStyle = 'italic';
+                infoCell.style.color = '#6b7280';
+                infoRow.appendChild(infoCell);
+                tbody.appendChild(infoRow);
+            }
+            
+            // Display generated code
+            document.getElementById('generatedCode').textContent = codeString;
+            
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function downloadResults() {
+            if (!modifiedData || modifiedData.length === 0) {
+                showAlert('No results to download. Please apply a condition first.', 'error');
+                return;
+            }
+
+            const csv = Papa.unparse(modifiedData);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `modified_dataframe_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            showAlert('Results downloaded successfully!', 'success');
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alertsContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            container.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
