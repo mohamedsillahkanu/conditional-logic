@@ -928,6 +928,17 @@
             if (!targetColumn || !currentData.length) return;
             
             updateValueInput();
+            
+            // Also update multiple condition values if they exist
+            const conditionType = document.getElementById('conditionType').value;
+            if (conditionType !== 'simple') {
+                const numConditions = parseInt(document.getElementById('numConditions').value || 2);
+                for (let i = 0; i < numConditions; i++) {
+                    if (document.getElementById(`multiVal${i}`)) {
+                        updateMultiConditionValue(i);
+                    }
+                }
+            }
         }
 
         function updateValueInput() {
@@ -993,7 +1004,7 @@
                     <div class="form-group">
                         <label>Condition ${i + 1}:</label>
                         <h4 style="color: #93c5fd; margin: 0.5rem 0;">Operator:</h4>
-                        <select id="multiOp${i}" class="form-control">
+                        <select id="multiOp${i}" class="form-control" onchange="updateMultiConditionValue(${i})">
                             <option value="==">Equals</option>
                             <option value="!=">Not Equals</option>
                             <option value=">">Greater Than</option>
@@ -1008,12 +1019,69 @@
                     <div class="form-group">
                         <label>&nbsp;</label>
                         <h4 style="color: #93c5fd; margin: 0.5rem 0;">Value:</h4>
-                        <input type="text" id="multiVal${i}" class="form-control" placeholder="Enter value ${i + 1}">
+                        <div id="multiCondTypeInfo${i}" style="font-size: 12px; color: #93c5fd; margin-bottom: 0.5rem;"></div>
+                        <div id="multiCondValueContainer${i}">
+                            <input type="text" id="multiVal${i}" class="form-control" placeholder="Enter value ${i + 1}">
+                        </div>
                     </div>
                     <div></div>
                     <div></div>
                 `;
                 container.appendChild(conditionRow);
+                
+                // Initialize the value input for this condition
+                updateMultiConditionValue(i);
+            }
+        }
+
+        function updateMultiConditionValue(index) {
+            const targetColumn = document.getElementById('targetColumn').value;
+            
+            if (!targetColumn || !currentData.length) return;
+            
+            // Get unique values from the column
+            const columnValues = currentData.map(row => row[targetColumn]).filter(val => val !== null && val !== undefined && val !== '');
+            const uniqueValues = [...new Set(columnValues)].sort();
+            
+            // Determine if column is numeric
+            const isNumeric = uniqueValues.every(val => !isNaN(parseFloat(val)) && isFinite(val));
+            
+            const container = document.getElementById(`multiCondValueContainer${index}`);
+            const typeInfo = document.getElementById(`multiCondTypeInfo${index}`);
+            
+            // Show column type info
+            if (typeInfo) {
+                const typeLabel = isNumeric ? 'Numeric' : 'Categorical';
+                typeInfo.textContent = `${typeLabel} (${uniqueValues.length} values)`;
+            }
+            
+            if (isNumeric) {
+                // For numeric columns
+                container.innerHTML = `
+                    <input type="number" id="multiVal${index}" class="form-control" placeholder="Enter number" list="multiCondNumericOptions${index}">
+                    <datalist id="multiCondNumericOptions${index}">
+                        ${uniqueValues.map(val => `<option value="${val}"></option>`).join('')}
+                    </datalist>
+                `;
+            } else {
+                // For categorical columns
+                if (uniqueValues.length <= 200) {
+                    container.innerHTML = `
+                        <select id="multiVal${index}" class="form-control">
+                            <option value="">Select value...</option>
+                            ${uniqueValues.map(val => `<option value="${val}">${val}</option>`).join('')}
+                        </select>
+                    `;
+                } else {
+                    // Too many values
+                    const topValues = uniqueValues.slice(0, 100);
+                    container.innerHTML = `
+                        <input type="text" id="multiVal${index}" class="form-control" placeholder="Enter text" list="multiCondTextOptions${index}">
+                        <datalist id="multiCondTextOptions${index}">
+                            ${topValues.map(val => `<option value="${val}"></option>`).join('')}
+                        </datalist>
+                    `;
+                }
             }
         }
 
