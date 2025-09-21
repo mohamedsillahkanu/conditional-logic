@@ -950,7 +950,7 @@
             const columnValues = currentData.map(row => row[targetColumn]).filter(val => val !== null && val !== undefined && val !== '');
             const uniqueValues = [...new Set(columnValues)].sort();
             
-            // Determine if column is numeric (simple check: if all non-empty values are numbers)
+            // Check if column is numeric using pandas-like logic
             const isNumeric = uniqueValues.every(val => !isNaN(parseFloat(val)) && isFinite(val));
             
             const container = document.getElementById('valueInputContainer');
@@ -963,32 +963,18 @@
             }
             
             if (isNumeric) {
-                // For numeric columns: number input with suggestions
+                // For numeric columns: allow manual input
                 container.innerHTML = `
-                    <input type="number" id="value1" class="form-control" placeholder="Enter number" list="numericOptions">
-                    <datalist id="numericOptions">
-                        ${uniqueValues.map(val => `<option value="${val}"></option>`).join('')}
-                    </datalist>
+                    <input type="number" id="value1" class="form-control" placeholder="Enter number" step="any">
                 `;
             } else {
-                // For categorical columns: always show dropdown if reasonable number of values
-                if (uniqueValues.length <= 200) {
-                    container.innerHTML = `
-                        <select id="value1" class="form-control">
-                            <option value="">Select value... (${uniqueValues.length} options)</option>
-                            ${uniqueValues.map(val => `<option value="${val}">${val}</option>`).join('')}
-                        </select>
-                    `;
-                } else {
-                    // Too many values, use input with datalist of most common ones
-                    const topValues = uniqueValues.slice(0, 100);
-                    container.innerHTML = `
-                        <input type="text" id="value1" class="form-control" placeholder="Enter text (${uniqueValues.length} unique values)" list="textOptions">
-                        <datalist id="textOptions">
-                            ${topValues.map(val => `<option value="${val}"></option>`).join('')}
-                        </datalist>
-                    `;
-                }
+                // For categorical columns: ALWAYS show dropdown with actual values
+                container.innerHTML = `
+                    <select id="value1" class="form-control">
+                        <option value="">Select value...</option>
+                        ${uniqueValues.map(val => `<option value="${val}">${val}</option>`).join('')}
+                    </select>
+                `;
             }
         }
 
@@ -1043,7 +1029,7 @@
             const columnValues = currentData.map(row => row[targetColumn]).filter(val => val !== null && val !== undefined && val !== '');
             const uniqueValues = [...new Set(columnValues)].sort();
             
-            // Determine if column is numeric
+            // Check if column is numeric
             const isNumeric = uniqueValues.every(val => !isNaN(parseFloat(val)) && isFinite(val));
             
             const container = document.getElementById(`multiCondValueContainer${index}`);
@@ -1056,32 +1042,18 @@
             }
             
             if (isNumeric) {
-                // For numeric columns
+                // For numeric columns: allow manual input
                 container.innerHTML = `
-                    <input type="number" id="multiVal${index}" class="form-control" placeholder="Enter number" list="multiCondNumericOptions${index}">
-                    <datalist id="multiCondNumericOptions${index}">
-                        ${uniqueValues.map(val => `<option value="${val}"></option>`).join('')}
-                    </datalist>
+                    <input type="number" id="multiVal${index}" class="form-control" placeholder="Enter number" step="any">
                 `;
             } else {
-                // For categorical columns
-                if (uniqueValues.length <= 200) {
-                    container.innerHTML = `
-                        <select id="multiVal${index}" class="form-control">
-                            <option value="">Select value...</option>
-                            ${uniqueValues.map(val => `<option value="${val}">${val}</option>`).join('')}
-                        </select>
-                    `;
-                } else {
-                    // Too many values
-                    const topValues = uniqueValues.slice(0, 100);
-                    container.innerHTML = `
-                        <input type="text" id="multiVal${index}" class="form-control" placeholder="Enter text" list="multiCondTextOptions${index}">
-                        <datalist id="multiCondTextOptions${index}">
-                            ${topValues.map(val => `<option value="${val}"></option>`).join('')}
-                        </datalist>
-                    `;
-                }
+                // For categorical columns: ALWAYS show dropdown
+                container.innerHTML = `
+                    <select id="multiVal${index}" class="form-control">
+                        <option value="">Select value...</option>
+                        ${uniqueValues.map(val => `<option value="${val}">${val}</option>`).join('')}
+                    </select>
+                `;
             }
         }
 
@@ -1145,7 +1117,7 @@
             const columnValues = currentData.map(row => row[targetColumn]).filter(val => val !== null && val !== undefined && val !== '');
             const uniqueValues = [...new Set(columnValues)].sort();
             
-            // Determine if column is numeric
+            // Check if column is numeric
             const isNumeric = uniqueValues.every(val => !isNaN(parseFloat(val)) && isFinite(val));
             
             const container = document.getElementById(`multiColValueContainer${index}`);
@@ -1158,32 +1130,18 @@
             }
             
             if (isNumeric) {
-                // For numeric columns
+                // For numeric columns: allow manual input
                 container.innerHTML = `
-                    <input type="number" id="multiColVal${index}" class="form-control" placeholder="Enter number" list="multiNumericOptions${index}">
-                    <datalist id="multiNumericOptions${index}">
-                        ${uniqueValues.map(val => `<option value="${val}"></option>`).join('')}
-                    </datalist>
+                    <input type="number" id="multiColVal${index}" class="form-control" placeholder="Enter number" step="any">
                 `;
             } else {
-                // For categorical columns
-                if (uniqueValues.length <= 200) {
-                    container.innerHTML = `
-                        <select id="multiColVal${index}" class="form-control">
-                            <option value="">Select value...</option>
-                            ${uniqueValues.map(val => `<option value="${val}">${val}</option>`).join('')}
-                        </select>
-                    `;
-                } else {
-                    // Too many values
-                    const topValues = uniqueValues.slice(0, 100);
-                    container.innerHTML = `
-                        <input type="text" id="multiColVal${index}" class="form-control" placeholder="Enter text" list="multiTextOptions${index}">
-                        <datalist id="multiTextOptions${index}">
-                            ${topValues.map(val => `<option value="${val}"></option>`).join('')}
-                        </datalist>
-                    `;
-                }
+                // For categorical columns: ALWAYS show dropdown
+                container.innerHTML = `
+                    <select id="multiColVal${index}" class="form-control">
+                        <option value="">Select value...</option>
+                        ${uniqueValues.map(val => `<option value="${val}">${val}</option>`).join('')}
+                    </select>
+                `;
             }
         }
 
