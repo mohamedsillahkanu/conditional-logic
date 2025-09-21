@@ -1067,9 +1067,6 @@
                 columnRow.className = 'condition-builder';
                 columnRow.style.marginBottom = '1rem';
                 
-                // Generate column options
-                const columnOptions = originalColumns.map(col => `<option value="${col}">${col}</option>`).join('');
-                
                 columnRow.innerHTML = `
                     <h4 style="color: #93c5fd; margin-bottom: 1rem;">Column ${i + 1} Condition</h4>
                     <div class="condition-row" style="grid-template-columns: 1fr 1fr 1fr;">
@@ -1077,7 +1074,6 @@
                             <label>Column ${i + 1}:</label>
                             <select id="multiCol${i}" class="form-control" onchange="updateMultiColumnValue(${i})">
                                 <option value="">Select column...</option>
-                                ${columnOptions}
                             </select>
                         </div>
                         <div class="form-group">
@@ -1104,6 +1100,15 @@
                     </div>
                 `;
                 container.appendChild(columnRow);
+                
+                // Populate the column dropdown after creating the HTML
+                const columnSelect = document.getElementById(`multiCol${i}`);
+                originalColumns.forEach(column => {
+                    const option = document.createElement('option');
+                    option.value = column;
+                    option.textContent = column;
+                    columnSelect.appendChild(option);
+                });
             }
         }
 
